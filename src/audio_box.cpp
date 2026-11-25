@@ -158,12 +158,25 @@ void AudioBox::OnSashDrag(wxSashEvent &event) {
 	SetMinSize(wxSize(-1, new_height));
 	GetParent()->Layout();
 
+	if (GetSize().GetHeight() > 0) {
+		new_height = GetSize().GetHeight();
+		SetMinSize(wxSize(-1, new_height));
+	}
+
 	// Karaoke mode is always disabled when the audio box is first opened, so
 	// the initial height shouldn't include it
 	if (context->karaoke->IsEnabled())
 		new_height -= context->karaoke->GetSize().GetHeight() + 6;
 
 	OPT_SET("Audio/Display Height")->SetInt(new_height);
+}
+
+void AudioBox::SetSashOnTop(bool top) {
+	if (sashOnTop == top) return;
+	sashOnTop = top;
+	SetSashVisible(wxSASH_TOP, top);
+	SetSashVisible(wxSASH_BOTTOM, !top);
+	Refresh();
 }
 
 void AudioBox::OnHorizontalZoom(wxScrollEvent &event) {

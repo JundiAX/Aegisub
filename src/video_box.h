@@ -35,6 +35,8 @@
 #include <wx/panel.h>
 
 namespace agi { struct Context; }
+class VideoDisplay;
+class wxSizer;
 class wxTextCtrl;
 
 /// @class VideoBox
@@ -42,6 +44,9 @@ class wxTextCtrl;
 class VideoBox final : public wxPanel {
 	std::vector<agi::signal::Connection> connections;
 	agi::Context *context;     ///< Project context
+	bool isDetached;
+	VideoDisplay *videoDisplay = nullptr;
+	wxSizer *topSizer = nullptr;
 	wxTextCtrl *VideoPosition; ///< Current frame/time
 	wxTextCtrl *VideoSubsPos;  ///< Time relative to the active subtitle line
 
@@ -50,4 +55,5 @@ class VideoBox final : public wxPanel {
 
 public:
 	VideoBox(wxWindow *parent, bool isDetached, agi::Context *context);
+	void SetFitToPane(bool fit);
 };

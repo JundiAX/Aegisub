@@ -304,9 +304,9 @@ void VideoDisplay::DrawOverscanMask(float horizontal_percent, float vertical_per
 }
 
 void VideoDisplay::UpdateViewportSize(bool rescalePan, wxSize newSize) {
-	// In free size mode, we ignore the argument and use the client size
+	// In free size / fit-to-pane mode, we ignore the argument and use the client size
 	// to avoid the viewport and client sizes getting out of sync
-	if (freeSize)
+	if (freeSize || fitToPane)
 		newSize = GetClientSize() * scale_factor;
 	assert(newSize != wxDefaultSize);
 	if (newSize.GetWidth() < 1) newSize.SetWidth(1);
@@ -328,7 +328,7 @@ void VideoDisplay::PositionVideo(bool preserveContentSize) {
 	content_width = viewportSize.GetWidth();
 	content_height = viewportSize.GetHeight();
 
-	if (freeSize) {
+	if (freeSize || fitToPane) {
 		// Adjust aspect ratio if necessary
 		int vidW = provider->GetWidth();
 		int vidH = provider->GetHeight();
@@ -339,18 +339,20 @@ void VideoDisplay::PositionVideo(bool preserveContentSize) {
 
 		// Window is wider than video, blackbox left/right
 		if (displayAr - videoAr > 0.01) {
-			content_width = content_height * videoAr;
+			content_width = std::max(1, int(content_height * videoAr));
 		}
 		// Video is wider than window, blackbox top/bottom
 		else if (videoAr - displayAr > 0.01) {
-			content_height = content_width / videoAr;
+			content_height = std::max(1, int(content_width / videoAr));
 		}
 
 		// Update windowZoomValue
 		// We must use content_height before content zoom has been applied to it
-		windowZoomValue = double(content_height) / vidH;
-		zoomBox->ChangeValue(fmt_wx("%g%%", windowZoomValue * 100.));
-		con->ass->Properties.video_zoom = windowZoomValue;
+		if (vidH > 0) {
+			windowZoomValue = double(content_height) / vidH;
+			zoomBox->ChangeValue(fmt_wx("%g%%", windowZoomValue * 100.));
+			con->ass->Properties.video_zoom = windowZoomValue;
+		}
 	}
 
 	if (preserveContentSize)
@@ -408,6 +410,12 @@ void VideoDisplay::FitClientSizeToVideo() {
 		top->SetSize(top->GetSize() + newViewportSize / scale_factor - cs);
 		SetClientSize(cs + top->GetSize() - oldSize);
 	}
+	else if (fitToPane) {
+		SetMinClientSize(FromDIP(wxSize(160, 90)));
+		SetMaxClientSize(wxDefaultSize);
+		if (GetParent()) GetParent()->Layout();
+		if (GetGrandParent()) GetGrandParent()->Layout();
+	}
 	else {
 		SetMinClientSize(newViewportSize / scale_factor);
 		SetMaxClientSize(newViewportSize / scale_factor);
@@ -419,9 +427,28 @@ void VideoDisplay::FitClientSizeToVideo() {
 	PositionVideo();
 }
 
+void VideoDisplay::SetFitToPane(bool fit) {
+	if (freeSize || fitToPane == fit) return;
+	fitToPane = fit;
+	if (fitToPane) {
+		SetMinClientSize(FromDIP(wxSize(160, 90)));
+		SetMaxClientSize(wxDefaultSize);
+		if (GetParent()) GetParent()->Layout();
+		UpdateViewportSize(true);
+		PositionVideo();
+	}
+	else {
+		SetMinClientSize(wxDefaultSize);
+		SetMaxClientSize(wxDefaultSize);
+		if (!std::isfinite(windowZoomValue) || windowZoomValue <= 0)
+			windowZoomValue = OPT_GET("Video/Default Zoom")->GetInt() * .125 + .125;
+		FitClientSizeToVideo();
+	}
+}
+
 void VideoDisplay::OnSizeEvent(wxSizeEvent &) {
-	bool preserveContentSize = freeSize && IsContentZoomActive();
-	if (freeSize) UpdateViewportSize(false);
+	bool preserveContentSize = (freeSize || fitToPane) && IsContentZoomActive();
+	if (freeSize || fitToPane) UpdateViewportSize(false);
 	PositionVideo(preserveContentSize);
 }
 
@@ -622,7 +649,7 @@ void VideoDisplay::SetTool(std::unique_ptr<VisualToolBase> new_tool) {
 	tool->SetToolbar(toolBar);
 
 	// Update size as the new typesetting tool may have changed the subtoolbar size
-	if (!freeSize)
+	if (!freeSize && !fitToPane)
 		FitClientSizeToVideo();
 	else {
 		// FitClientSizeToVideo fits the window to the video, which we don't want to do

@@ -596,8 +596,10 @@ void SubsEditBox::DoOnSplit(bool show_original) {
 	GetSizer()->Show(bottom_sizer, show_original);
 	Fit();
 	SetMinSize(GetSize());
-	wxSizer* parent_sizer = GetParent()->GetSizer();
-	if (parent_sizer) parent_sizer->Layout();
+	if (wxSizer *parent_sizer = GetParent()->GetSizer())
+		parent_sizer->Layout();
+	else
+		GetParent()->Layout();
 	Thaw();
 }
 

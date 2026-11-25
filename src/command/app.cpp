@@ -174,6 +174,99 @@ struct app_language final : public Command {
 	}
 };
 
+struct app_layout_default final : public Command {
+	CMD_NAME("app/layout/default")
+	STR_MENU("&Default (Top/Bottom)")
+	STR_DISP("Layout: Default (Top/Bottom)")
+	STR_HELP("Use the classic Aegisub top/bottom layout")
+	CMD_TYPE(COMMAND_RADIO)
+
+	void operator()(agi::Context *) override {
+		OPT_SET("App/Layout/Grid Position")->SetString("bottom");
+		OPT_SET("App/Layout/Video Right")->SetBool(false);
+		OPT_SET("App/Layout/Swap Audio and Edit")->SetBool(false);
+		OPT_SET("App/Layout/Fit Video")->SetBool(false);
+	}
+
+	bool IsActive(const agi::Context *) override {
+		return OPT_GET("App/Layout/Grid Position")->GetString() == "bottom"
+			&& !OPT_GET("App/Layout/Video Right")->GetBool()
+			&& !OPT_GET("App/Layout/Swap Audio and Edit")->GetBool()
+			&& !OPT_GET("App/Layout/Fit Video")->GetBool();
+	}
+};
+
+struct app_layout_grid_left final : public Command {
+	CMD_NAME("app/layout/grid_left")
+	STR_MENU("Grid &Left + Stacked Right")
+	STR_DISP("Layout: Grid Left + Stacked Right")
+	STR_HELP("Show Subtitle Grid on the left, with Video, Audio, and Edit Box stacked on the right")
+	CMD_TYPE(COMMAND_RADIO)
+
+	void operator()(agi::Context *) override {
+		OPT_SET("App/Layout/Grid Position")->SetString("left");
+		OPT_SET("App/Layout/Column Order")->SetString("video,audio,edit");
+		OPT_SET("App/Layout/Fit Video")->SetBool(true);
+	}
+
+	bool IsActive(const agi::Context *) override {
+		return OPT_GET("App/Layout/Grid Position")->GetString() == "left"
+			&& OPT_GET("App/Layout/Column Order")->GetString() == "video,audio,edit";
+	}
+};
+
+struct app_layout_grid_right final : public Command {
+	CMD_NAME("app/layout/grid_right")
+	STR_MENU("Stacked Left + Grid &Right")
+	STR_DISP("Layout: Stacked Left + Grid Right")
+	STR_HELP("Show Video, Audio, and Edit Box stacked on the left, with Subtitle Grid on the right")
+	CMD_TYPE(COMMAND_RADIO)
+
+	void operator()(agi::Context *) override {
+		OPT_SET("App/Layout/Grid Position")->SetString("right");
+		OPT_SET("App/Layout/Column Order")->SetString("video,audio,edit");
+		OPT_SET("App/Layout/Fit Video")->SetBool(true);
+	}
+
+	bool IsActive(const agi::Context *) override {
+		return OPT_GET("App/Layout/Grid Position")->GetString() == "right"
+			&& OPT_GET("App/Layout/Column Order")->GetString() == "video,audio,edit";
+	}
+};
+
+struct app_layout_grid_top final : public Command {
+	CMD_NAME("app/layout/grid_top")
+	STR_MENU("Grid &Top + Bottom Workspace")
+	STR_DISP("Layout: Grid Top + Bottom Workspace")
+	STR_HELP("Show Subtitle Grid on the top and Video, Audio, and Edit Box below")
+	CMD_TYPE(COMMAND_RADIO)
+
+	void operator()(agi::Context *) override {
+		OPT_SET("App/Layout/Grid Position")->SetString("top");
+		OPT_SET("App/Layout/Video Right")->SetBool(false);
+		OPT_SET("App/Layout/Swap Audio and Edit")->SetBool(false);
+		OPT_SET("App/Layout/Fit Video")->SetBool(false);
+	}
+
+	bool IsActive(const agi::Context *) override {
+		return OPT_GET("App/Layout/Grid Position")->GetString() == "top"
+			&& !OPT_GET("App/Layout/Video Right")->GetBool()
+			&& !OPT_GET("App/Layout/Swap Audio and Edit")->GetBool()
+			&& !OPT_GET("App/Layout/Fit Video")->GetBool();
+	}
+};
+
+struct app_layout_customize final : public Command {
+	CMD_NAME("app/layout/customize")
+	STR_MENU("&Customize Layout...")
+	STR_DISP("Customize Layout...")
+	STR_HELP("Configure panel positions, stack order, and split proportions")
+
+	void operator()(agi::Context *c) override {
+		ShowLayoutDialog(c);
+	}
+};
+
 struct app_log final : public Command {
 	CMD_NAME("app/log")
 	CMD_ICON(about_menu)
@@ -343,6 +436,11 @@ namespace cmd {
 		reg(std::make_unique<app_display_video_subs>());
 		reg(std::make_unique<app_exit>());
 		reg(std::make_unique<app_language>());
+		reg(std::make_unique<app_layout_customize>());
+		reg(std::make_unique<app_layout_default>());
+		reg(std::make_unique<app_layout_grid_left>());
+		reg(std::make_unique<app_layout_grid_right>());
+		reg(std::make_unique<app_layout_grid_top>());
 		reg(std::make_unique<app_log>());
 		reg(std::make_unique<app_new_window>());
 		reg(std::make_unique<app_options>());

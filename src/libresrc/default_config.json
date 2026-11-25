@@ -12,6 +12,15 @@
 		"First Start" : true,
 		"Hotkey Migrations" : [{"string": "placeholder since empty arrays aren't supported"}],
 		"Language" : "",
+		"Layout" : {
+			"Column Order" : "video,audio,edit",
+			"Fit Video" : false,
+			"Grid Position" : "bottom",
+			"Grid Ratio" : 50,
+			"Swap Audio and Edit" : false,
+			"Video Ratio" : 45,
+			"Video Right" : false
+		},
 		"Maximized" : false,
 		"Save Charset" : "UTF-8",
 		"Save UI State" : true,

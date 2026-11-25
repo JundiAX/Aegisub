@@ -131,6 +131,9 @@ class VideoDisplay final : public wxGLCanvas {
 	/// Whether the display can be freely resized by the user
 	bool freeSize;
 
+	/// Whether the display scales to fill its parent pane
+	bool fitToPane = false;
+
 	/// Frame which will replace the currently visible frame on the next render
 	std::shared_ptr<VideoFrame> pending_frame;
 
@@ -229,6 +232,9 @@ public:
 	void SetWindowZoom(double value);
 	/// @brief Get the current window zoom level
 	double GetWindowZoom() const { return windowZoomValue; }
+
+	void SetFitToPane(bool fit);
+	bool IsFitToPane() const { return fitToPane; }
 
 	/// @brief Reset content zoom and pan
 	void ResetContentZoom();

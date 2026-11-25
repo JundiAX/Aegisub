@@ -73,6 +73,7 @@ class AudioBox final : public wxSashWindow, private agi::signal::ConnectionScope
 
 	// Mouse wheel zoom accumulator
 	int mouse_zoom_accum = 0;
+	bool sashOnTop = false;
 
 	void SetHorizontalZoom(int new_zoom);
 	void OnAudioOpen();
@@ -86,6 +87,7 @@ class AudioBox final : public wxSashWindow, private agi::signal::ConnectionScope
 public:
 	AudioBox(wxWindow *parent, agi::Context *context);
 
+	void SetSashOnTop(bool top);
 	void ShowKaraokeBar(bool show);
 
 	/// @brief Scroll the audio display

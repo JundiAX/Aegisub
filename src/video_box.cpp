@@ -52,6 +52,7 @@
 VideoBox::VideoBox(wxWindow *parent, bool isDetached, agi::Context *context)
 : wxPanel(parent, -1)
 , context(context)
+, isDetached(isDetached)
 {
 	auto videoSlider = new VideoSlider(this, context);
 	videoSlider->SetToolTip(_("Seek video"));
@@ -72,14 +73,14 @@ VideoBox::VideoBox(wxWindow *parent, bool isDetached, agi::Context *context)
 	auto visualToolBar = toolbar::GetToolbar(this, "visual_tools", context, "Video", true);
 	auto visualSubToolBar = new wxToolBar(this, -1, wxDefaultPosition, wxDefaultSize, wxTB_VERTICAL | wxTB_BOTTOM | wxTB_NODIVIDER | wxTB_FLAT);
 
-	auto videoDisplay = new VideoDisplay(visualSubToolBar, isDetached, zoomBox, this, context);
+	videoDisplay = new VideoDisplay(visualSubToolBar, isDetached, zoomBox, this, context);
 	videoDisplay->MoveBeforeInTabOrder(videoSlider);
 
 	auto toolbarSizer = new wxBoxSizer(wxVERTICAL);
 	toolbarSizer->Add(visualToolBar, wxSizerFlags(1));
 	toolbarSizer->Add(visualSubToolBar, wxSizerFlags());
 
-	auto topSizer = new wxBoxSizer(wxHORIZONTAL);
+	topSizer = new wxBoxSizer(wxHORIZONTAL);
 	topSizer->Add(toolbarSizer, 0, wxEXPAND);
 	topSizer->Add(videoDisplay, isDetached, isDetached ? wxEXPAND : 0);
 
@@ -106,6 +107,16 @@ VideoBox::VideoBox(wxWindow *parent, bool isDetached, agi::Context *context)
 		context->selectionController->AddSelectionListener(&VideoBox::UpdateTimeBoxes, this),
 		context->videoController->AddSeekListener(&VideoBox::UpdateTimeBoxes, this),
 	});
+}
+
+void VideoBox::SetFitToPane(bool fit) {
+	if (isDetached || !videoDisplay || !topSizer) return;
+	videoDisplay->SetFitToPane(fit);
+	if (wxSizerItem *item = topSizer->GetItem(videoDisplay)) {
+		item->SetProportion(fit ? 1 : 0);
+		item->SetFlag(fit ? wxEXPAND : 0);
+	}
+	Layout();
 }
 
 void VideoBox::UpdateTimeBoxes() {

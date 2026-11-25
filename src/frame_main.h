@@ -38,6 +38,8 @@
 class AegisubApp;
 class AsyncVideoProvider;
 class AudioBox;
+class MainLayoutPanel;
+class SubsEditBox;
 class VideoBox;
 namespace agi { class AudioProvider; }
 namespace agi { struct Context; class OptionValue; }
@@ -71,15 +73,14 @@ class FrameMain : public wxFrame, private agi::signal::ConnectionScope {
 	void OnVideoOpen(AsyncVideoProvider *provider);
 	void OnVideoDetach(agi::OptionValue const& opt);
 	void OnSubtitlesOpen();
+	void OnLayoutChanged();
 
 	void EnableToolBar(agi::OptionValue const& opt);
 
-	AudioBox *audioBox;      ///< The audio area
-	VideoBox *videoBox;      ///< The video area
-
-	wxSizer *MainSizer;  ///< Arranges things from top to bottom in the window
-	wxSizer *TopSizer;   ///< Arranges video box and tool box from left to right
-	wxSizer *ToolsSizer; ///< Arranges audio and editing areas top to bottom
+	MainLayoutPanel *mainPanel = nullptr; ///< Main layout container
+	AudioBox *audioBox = nullptr;         ///< The audio area
+	VideoBox *videoBox = nullptr;         ///< The video area
+	SubsEditBox *editBox = nullptr;       ///< The subtitle edit area
 
 public:
 	FrameMain();
