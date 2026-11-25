@@ -70,8 +70,10 @@
 #include <vector>
 
 #include <wx/brush.h>
+#include <wx/cursor.h>
 #include <wx/dcclient.h>
 #include <wx/dnd.h>
+#include <wx/gdicmn.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
 #include <wx/pen.h>
@@ -80,6 +82,7 @@
 #include <wx/statline.h>
 #include <wx/sysopt.h>
 #include <wx/toolbar.h>
+#include <wx/utils.h>
 
 enum {
 	ID_APP_TIMER_STATUSCLEAR = 12002
@@ -137,77 +140,77 @@ int clamp_split(int total, int ratio, int minA, int minB) {
 	return std::clamp(target, minA, total - minB);
 }
 
-class LayoutSash final : public wxWindow {
-	bool horizontal = false;
-	bool dragging = false;
-	wxPoint dragStartScreen;
-	int lastDelta = 0;
-	std::function<void()> onBeginDrag;
-	std::function<void(int, bool)> onDrag;
-
-public:
-	LayoutSash(wxWindow *parent, std::function<void()> beginCb, std::function<void(int, bool)> dragCb)
-	: wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)
-	, onBeginDrag(std::move(beginCb))
-	, onDrag(std::move(dragCb))
-	{
-		SetHorizontal(false);
-		Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
-			wxPaintDC dc(this);
-			wxSize sz = GetClientSize();
-			dc.SetBrush(wxBrush(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE)));
-			dc.SetPen(*wxTRANSPARENT_PEN);
-			dc.DrawRectangle(0, 0, sz.GetWidth(), sz.GetHeight());
-			dc.SetPen(wxPen(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW)));
-			if (horizontal) {
-				int y = sz.GetHeight() / 2;
-				dc.DrawLine(0, y, sz.GetWidth(), y);
-			}
-			else {
-				int x = sz.GetWidth() / 2;
-				dc.DrawLine(x, 0, x, sz.GetHeight());
-			}
-		});
-		Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent&) {
-			dragging = true;
-			lastDelta = 0;
-			dragStartScreen = wxGetMousePosition();
-			if (onBeginDrag) onBeginDrag();
-			CaptureMouse();
-		});
-		Bind(wxEVT_MOTION, [this](wxMouseEvent&) {
-			if (!dragging || !HasCapture()) return;
-			wxPoint cur = wxGetMousePosition();
-			int delta = horizontal ? (cur.y - dragStartScreen.y) : (cur.x - dragStartScreen.x);
-			lastDelta = delta;
-			if (onDrag) onDrag(delta, false);
-		});
-		Bind(wxEVT_LEFT_UP, [this](wxMouseEvent&) {
-			if (!dragging) return;
-			wxPoint cur = wxGetMousePosition();
-			int delta = horizontal ? (cur.y - dragStartScreen.y) : (cur.x - dragStartScreen.x);
-			lastDelta = delta;
-			dragging = false;
-			if (HasCapture()) ReleaseMouse();
-			if (onDrag) onDrag(delta, true);
-		});
-		Bind(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) {
-			if (!dragging) return;
-			dragging = false;
-			if (onDrag) onDrag(lastDelta, true);
-		});
-	}
-
-	void SetHorizontal(bool horiz) {
-		horizontal = horiz;
-		SetCursor(wxCursor(horizontal ? wxCURSOR_SIZENS : wxCURSOR_SIZEWE));
-		Refresh();
-	}
-};
-
 } // namespace
 
 class MainLayoutPanel final : public wxPanel {
+	class LayoutSash final : public wxWindow {
+		bool horizontal = false;
+		bool dragging = false;
+		wxPoint dragStartScreen;
+		int lastDelta = 0;
+		std::function<void()> onBeginDrag;
+		std::function<void(int, bool)> onDrag;
+
+	public:
+		LayoutSash(wxWindow *parent, std::function<void()> beginCb, std::function<void(int, bool)> dragCb)
+		: wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)
+		, onBeginDrag(std::move(beginCb))
+		, onDrag(std::move(dragCb))
+		{
+			SetHorizontal(false);
+			Bind(wxEVT_PAINT, [this](wxPaintEvent&) {
+				wxPaintDC dc(this);
+				wxSize sz = GetClientSize();
+				dc.SetBrush(wxBrush(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE)));
+				dc.SetPen(*wxTRANSPARENT_PEN);
+				dc.DrawRectangle(0, 0, sz.GetWidth(), sz.GetHeight());
+				dc.SetPen(wxPen(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNSHADOW)));
+				if (horizontal) {
+					int y = sz.GetHeight() / 2;
+					dc.DrawLine(0, y, sz.GetWidth(), y);
+				}
+				else {
+					int x = sz.GetWidth() / 2;
+					dc.DrawLine(x, 0, x, sz.GetHeight());
+				}
+			});
+			Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent&) {
+				dragging = true;
+				lastDelta = 0;
+				dragStartScreen = wxGetMousePosition();
+				if (onBeginDrag) onBeginDrag();
+				CaptureMouse();
+			});
+			Bind(wxEVT_MOTION, [this](wxMouseEvent&) {
+				if (!dragging || !HasCapture()) return;
+				wxPoint cur = wxGetMousePosition();
+				int delta = horizontal ? (cur.y - dragStartScreen.y) : (cur.x - dragStartScreen.x);
+				lastDelta = delta;
+				if (onDrag) onDrag(delta, false);
+			});
+			Bind(wxEVT_LEFT_UP, [this](wxMouseEvent&) {
+				if (!dragging) return;
+				wxPoint cur = wxGetMousePosition();
+				int delta = horizontal ? (cur.y - dragStartScreen.y) : (cur.x - dragStartScreen.x);
+				lastDelta = delta;
+				dragging = false;
+				if (HasCapture()) ReleaseMouse();
+				if (onDrag) onDrag(delta, true);
+			});
+			Bind(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) {
+				if (!dragging) return;
+				dragging = false;
+				if (onDrag) onDrag(lastDelta, true);
+			});
+		}
+
+		void SetHorizontal(bool horiz) {
+			horizontal = horiz;
+			SetCursor(wxCursor(horizontal ? wxCURSOR_SIZENS : wxCURSOR_SIZEWE));
+			Refresh();
+		}
+	};
+
 	FrameMain *frame = nullptr;
 	BaseGrid *grid = nullptr;
 	VideoBox *video = nullptr;

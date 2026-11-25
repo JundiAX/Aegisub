@@ -43,7 +43,12 @@ if (Test-Path $gitVersionHeaderPath) {
   }
 }
 
-$gitRevision = $lastSvnRevision + ((git -C $repositoryRootPath log --pretty=oneline "$($lastSvnHash)..HEAD" 2>$null | Measure-Object).Count)
+$svnCommitType = (git -C $repositoryRootPath cat-file -t $lastSvnHash 2>$null)
+if ($svnCommitType -eq 'commit') {
+  $gitRevision = $lastSvnRevision + [int](git -C $repositoryRootPath rev-list --count "$($lastSvnHash)..HEAD" 2>$null)
+} else {
+  $gitRevision = 0
+}
 $gitBranch = [string](git -C $repositoryRootPath symbolic-ref --short HEAD 2>$null)
 if ([string]::IsNullOrEmpty($gitBranch)) {
   $gitBranch = [Environment]::GetEnvironmentVariable('AEGISUB_BUILD_BRANCH')
@@ -56,7 +61,10 @@ $gitHash = git -C $repositoryRootPath rev-parse --short HEAD 2>$null
 $gitVersionString = $gitRevision, $gitBranch, $gitHash -join '-'
 $exactGitTag = git -C $repositoryRootPath describe --exact-match --tags 2>$null
 
-if ($gitVersionString -eq $version['BUILD_GIT_VERSION_STRING']) {
+if (($gitVersionString -eq $version['BUILD_GIT_VERSION_STRING']) -and
+    $version.ContainsKey('TAGGED_RELEASE') -and
+    $version.ContainsKey('RESOURCE_BASE_VERSION') -and
+    $version.ContainsKey('INSTALLER_VERSION')) {
   exit 0
 }
 
@@ -68,21 +76,39 @@ if ($exactGitTag -match $semVerMatch) {
   $gitVersionString = $joinedVersion + @("-$($Matches[4])",'')[!$Matches[4]]
   $version['INSTALLER_VERSION'] = $joinedVersion
 } else {
+  $foundBaseVersion = $false
   foreach ($rev in (git -C $repositoryRootPath rev-list --tags 2>$null)) {
     $tag = git -C $repositoryRootPath describe --exact-match --tags $rev 2>$null
-    if ($tag -match $semVerMatch) {#
+    if ($tag -match $semVerMatch) {
       $version['TAGGED_RELEASE'] = $false
       $version['RESOURCE_BASE_VERSION'] = $Matches[1..3]
       $version['INSTALLER_VERSION'] = ($Matches[1..3] -join '.')
+      $foundBaseVersion = $true
       break;
     }
+  }
+  if (-not $foundBaseVersion) {
+    $mesonBuildPath = Join-Path $repositoryRootPath 'meson.build'
+    $mesonVersionMatch = if (Test-Path $mesonBuildPath) {
+      Select-String -Path $mesonBuildPath -Pattern "^\s*version:\s*'(\d+)\.(\d+)\.(\d+)" | Select-Object -First 1
+    } else { $null }
+    $baseParts = if ($mesonVersionMatch) {
+      @($mesonVersionMatch.Matches[0].Groups[1].Value,
+        $mesonVersionMatch.Matches[0].Groups[2].Value,
+        $mesonVersionMatch.Matches[0].Groups[3].Value)
+    } else {
+      @('0', '0', '0')
+    }
+    $version['TAGGED_RELEASE'] = $false
+    $version['RESOURCE_BASE_VERSION'] = $baseParts
+    $version['INSTALLER_VERSION'] = ($baseParts -join '.')
   }
 }
 
 $version['BUILD_GIT_VERSION_NUMBER'] = $gitRevision
 $version['BUILD_GIT_VERSION_STRING'] = $gitVersionString
 
-$version.GetEnumerator() | %{
+$headerLines = $version.GetEnumerator() | %{
   $type = $_.Value.GetType()
   $value = $_.Value
   $fmtValue = switch ($type) {
@@ -92,8 +118,9 @@ $version.GetEnumerator() | %{
     ([object[]]) {$value -join ', '}
     default {
       Write-Host "no format known for type '$type' - trying default string conversion" -ForegroundColor Red
-      {"`"$($value.ToString())`""}
+      "`"$($value.ToString())`""
     }
   }
-  "`n#define $($_.Key) $($fmtValue)"
-} | Out-File -FilePath $gitVersionHeaderPath -Encoding utf8
+  "#define $($_.Key) $($fmtValue)"
+}
+[System.IO.File]::WriteAllLines($gitVersionHeaderPath, [string[]]$headerLines, (New-Object System.Text.UTF8Encoding($false)))

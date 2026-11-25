@@ -21,10 +21,12 @@
 #include <array>
 #include <string>
 
+#include <wx/arrstr.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/dialog.h>
+#include <wx/event.h>
 #include <wx/intl.h>
 #include <wx/sizer.h>
 #include <wx/spinctrl.h>
